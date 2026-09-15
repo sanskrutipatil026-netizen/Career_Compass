@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in · Career Compass</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <nav class="top-links" aria-label="Account links">
+      <a href="#help">Help</a>
+      <a href="#signup" id="navSignup">Sign up</a>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section class="intro" aria-labelledby="welcome-title">
+      <p class="eyebrow">Welcome to</p>
+      <h1 id="welcome-title">Career Compass</h1>
+      <p class="lede">
+        Sign in to upload resumes, track interviews, and surface the skills that match each role.
+      </p>
+    </section>
+
+    <section class="auth-panel" aria-labelledby="form-title">
+      <div class="mode-tabs" role="tablist" aria-label="Account mode">
+        <button type="button" class="tab is-active" role="tab" aria-selected="true" id="tabSignin" data-mode="signin">
+          Sign in
+        </button>
+        <button type="button" class="tab" role="tab" aria-selected="false" id="tabSignup" data-mode="signup">
+          Sign up
+        </button>
+      </div>
+
+      <h2 id="form-title" class="form-title">Sign in to your account</h2>
+      <p class="form-sub" id="formSub">Enter your username and password to continue.</p>
+
+      <form id="authForm" class="auth-form" novalidate>
+        <div class="field" id="nameField" hidden>
+          <label for="fullName">Full name</label>
+          <input type="text" id="fullName" name="fullName" autocomplete="name" placeholder="Alex Morgan" />
+        </div>
+
+        <div class="field">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            autocomplete="username"
+            placeholder="your.username"
+            required
+          />
+        </div>
+
+        <div class="field" id="emailField" hidden>
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="password">Password</label>
+            <a href="#forgot" class="text-link" id="forgotLink">Forgot password?</a>
+          </div>
+          <div class="password-wrap">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              required
+              minlength="8"
+            />
+            <button type="button" class="toggle-pass" id="togglePass" aria-label="Show password">
+              Show
+            </button>
+          </div>
+        </div>
+
+        <div class="field" id="confirmField" hidden>
+          <label for="confirmPassword">Confirm password</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            autocomplete="new-password"
+            placeholder="••••••••"
+            minlength="8"
+          />
+        </div>
+
+        <div class="options" id="signinOptions">
+          <label class="check">
+            <input type="checkbox" id="remember" name="remember" />
+            <span>Remember me</span>
+          </label>
+          <a href="#help" class="text-link">Need help?</a>
+        </div>
+
+        <div class="options" id="signupOptions" hidden>
+          <label class="check">
+            <input type="checkbox" id="terms" name="terms" />
+            <span>I agree to the <a href="#terms">Terms</a> and <a href="#privacy">Privacy Policy</a></span>
+          </label>
+        </div>
+
+        <p class="form-error" id="formError" role="alert" hidden></p>
+
+        <button type="submit" class="btn primary" id="submitBtn">Sign in</button>
+      </form>
+
+      <div class="divider" aria-hidden="true"><span>or continue with</span></div>
+
+      <div class="social">
+        <button type="button" class="btn social-btn" aria-label="Continue with Google">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="#EA4335" d="M12 10.2v3.6h5.1c-.2 1.2-1.5 3.6-5.1 3.6-3.1 0-5.6-2.5-5.6-5.6S8.9 6.2 12 6.2c1.8 0 3 .7 3.7 1.4l2.5-2.4C16.8 3.8 14.6 2.8 12 2.8 6.9 2.8 2.8 6.9 2.8 12S6.9 21.2 12 21.2c5.5 0 9.1-3.9 9.1-9.3 0-.6-.1-1.1-.2-1.7H12z"/>
+          </svg>
+          Google
+        </button>
+        <button type="button" class="btn social-btn" aria-label="Continue with GitHub">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="currentColor" d="M12 2.2c-5.4 0-9.8 4.4-9.8 9.8 0 4.3 2.8 8 6.7 9.3.5.1.7-.2.7-.5v-1.8c-2.7.6-3.3-1.3-3.3-1.3-.4-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.7.4-1.1.6-1.3-2.2-.2-4.5-1.1-4.5-4.9 0-1.1.4-2 1-2.7-.1-.2-.4-1.3.1-2.7 0 0 .8-.3 2.7 1 .8-.2 1.6-.3 2.4-.3s1.6.1 2.4.3c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.5.1 2.7.6.7 1 1.6 1 2.7 0 3.8-2.3 4.6-4.5 4.9.4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5 3.9-1.3 6.7-5 6.7-9.3 0-5.4-4.4-9.8-9.8-9.8z"/>
+          </svg>
+          GitHub
+        </button>
+      </div>
+
+      <p class="switch-line" id="switchLine">
+        New here? <button type="button" class="text-btn" data-mode="signup">Create an account</button>
+      </p>
+    </section>
+  </main>
+
+  <footer class="foot" id="help">
+    <div class="foot-links">
+      <a href="#help">Help Center</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#terms">Terms</a>
+      <a href="mailto:support@example.com">Contact support</a>
+    </div>
+    <p class="muted">Having trouble signing in? Reset your password or reach support.</p>
+  </footer>
+
+  <dialog class="modal" id="helpModal" aria-labelledby="helpTitle">
+    <form method="dialog" class="modal-card">
+      <h3 id="helpTitle">Need help?</h3>
+      <ul>
+        <li>Use the username you registered with (not always your email).</li>
+        <li>Passwords must be at least 8 characters.</li>
+        <li>Use <strong>Forgot password?</strong> if you cannot sign in.</li>
+        <li>Still stuck? Email <a href="mailto:support@example.com">support@example.com</a>.</li>
+      </ul>
+      <button type="submit" class="btn primary">Got it</button>
+    </form>
+  </dialog>
+
+  <script src="login.js"></script>
+</body>
+</html>

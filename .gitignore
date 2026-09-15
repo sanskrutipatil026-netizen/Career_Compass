@@ -1,0 +1,17 @@
+
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+dist/
+build/
+*.log
+
+frontend/AdharCard (1).pdf
+frontend/*.docx
+frontend/*.xlsx
+frontend/*.zip
+frontend/*.jpeg
+frontend/*.jpg
+frontend/*signature*
