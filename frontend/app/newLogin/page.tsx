@@ -1,6 +1,6 @@
 "use client";
 import {useRouter} from "next/navigation";
-
+import { signIn } from "next-auth/react";
 import { FormEvent, useState } from "react";
 
 type Mode = "signin" | "signup";
@@ -33,23 +33,20 @@ const router=useRouter();
     setTerms(false);
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
+ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setError("");
 
-    if (!username.trim() || !password) {
-      setError("Username and password are required.");
-      return;
-    }
+  if (!username.trim() || !password) {
+    setError("Email and password are required.");
+    return;
+  }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
+  try {
+    // SIGNUP
     if (isSignup) {
-      if (!fullName.trim() || !email.trim()) {
-        setError("Full name and email are required to sign up.");
+      if (!fullName.trim()) {
+        setError("Full name is required.");
         return;
       }
 
@@ -63,13 +60,54 @@ const router=useRouter();
         return;
       }
 
-      alert(`Account created successfully for ${username}!`);
-    } else {
-      alert(`Signed in successfully as ${username}!`);
-    }
-    router.push("/personalD");
-  };
+      const response = await fetch(
+        "http://localhost:5000/api/auth/signup",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: fullName,
+            email: username,
+            password: password,
+          }),
+        }
+      );
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || "Signup failed.");
+        return;
+      }
+
+      alert("Account created successfully! Please sign in.");
+      changeMode("signin");
+      return;
+    }
+
+    // LOGIN USING NEXTAUTH CREDENTIALS
+    const result = await signIn("credentials", {
+      email: username,
+      password: password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError("Invalid email or password.");
+      return;
+    }
+
+    if (result?.ok) {
+      alert("Signed in successfully!");
+      router.push("/personalD");
+    }
+  } catch (error) {
+    console.error(error);
+    setError("Unable to connect to the server.");
+  }
+};
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#fef3c7] via-[#fff8e7] to-[#f5e6d3] text-[#3d2e22]">
       {/* Top Navigation */}
@@ -118,7 +156,7 @@ const router=useRouter();
           {/* Tabs */}
           <div className="mb-5 grid grid-cols-2 gap-1 rounded-full bg-[#a67b5b]/15 p-1">
             <button
-              type="button"
+              type="submit"
               onClick={() => changeMode("signin")}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                 !isSignup
@@ -172,32 +210,18 @@ const router=useRouter();
             {/* Username */}
             <div>
               <label className="mb-1 block text-sm font-medium text-[#6b5344]">
-                Username
+                Email
               </label>
               <input
-                type="text"
-                placeholder="your.username"
+                type="email"
+                placeholder="you@example.com"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-xl border border-[#a67b5b]/25 bg-[#fff8e7] px-4 py-3 outline-none transition focus:border-[#a67b5b] focus:bg-white focus:ring-4 focus:ring-[#a67b5b]/15"
               />
             </div>
 
-            {/* Email */}
-            {isSignup && (
-              <div>
-                <label className="mb-1 block text-sm font-medium text-[#6b5344]">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-[#a67b5b]/25 bg-[#fff8e7] px-4 py-3 outline-none transition focus:border-[#a67b5b] focus:bg-white focus:ring-4 focus:ring-[#a67b5b]/15"
-                />
-              </div>
-            )}
+           
 
             {/* Password */}
             <div>
@@ -208,12 +232,12 @@ const router=useRouter();
 
                 {!isSignup && (
                   <button
-                    type="button"
-                    onClick={() => alert("Password reset feature will be added soon.")}
-                    className="text-sm font-medium text-[#8b6347] hover:underline"
-                  >
-                    Forgot password?
-                  </button>
+                 type="button"
+                  onClick={() => router.push("/forgot-password")}
+                  className="text-sm font-medium text-[#8b6347] hover:underline"
+                   >
+                Forgot password?
+                 </button>
                 )}
               </div>
 
@@ -321,19 +345,13 @@ const router=useRouter();
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => alert("Google login will be connected soon.")}
+              onClick={() => signIn("google", { callbackUrl: "/personalD" })}
               className="rounded-xl border border-[#a67b5b]/25 bg-[#fffdf8] py-3 text-sm font-medium text-[#6b5344] transition hover:bg-[#fef3c7]"
             >
               Google
             </button>
 
-            <button
-              type="button"
-              onClick={() => alert("GitHub login will be connected soon.")}
-              className="rounded-xl border border-[#a67b5b]/25 bg-[#fffdf8] py-3 text-sm font-medium text-[#6b5344] transition hover:bg-[#fef3c7]"
-            >
-              GitHub
-            </button>
+            
           </div>
 
           {/* Switch Mode */}
