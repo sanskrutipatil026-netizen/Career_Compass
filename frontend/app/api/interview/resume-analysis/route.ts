@@ -9,108 +9,121 @@ const pdf = require("pdf-parse-debugging-disabled");
 export const runtime = "nodejs";
 
 const groq = new Groq({
-
-apiKey: process.env.GROQ_API_KEY,
-
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 export async function POST(req: Request) {
+  try {
+    // ==========================================================
+    // GET UPLOADED RESUME
+    // ==========================================================
 
-try {
+    const formData = await req.formData();
 
-const formData = await req.formData();
+    const file = formData.get("resume") as File | null;
 
-const file = formData.get("resume") as File | null;
+    if (!file) {
+      return NextResponse.json(
+        {
+          error: "No file uploaded",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
-if (!file) {
+    // ==========================================================
+    // READ FILE
+    // ==========================================================
 
-return NextResponse.json(
+    const buffer = Buffer.from(
+      await file.arrayBuffer()
+    );
 
-{ error: "No file uploaded" },
+    let resumeText = "";
 
+    // ==========================================================
+    // PDF
+    // ==========================================================
 
+    if (
+      file.name
+        .toLowerCase()
+        .endsWith(".pdf")
+    ) {
+      const data = await pdf(buffer);
 
-{ status: 400 }
+      resumeText = data.text;
+    }
 
-);
+    // ==========================================================
+    // DOCX
+    // ==========================================================
 
-}
+    else if (
+      file.name
+        .toLowerCase()
+        .endsWith(".docx")
+    ) {
+      const data =
+        await mammoth.extractRawText({
+          buffer,
+        });
 
-const buffer = Buffer.from(await file.arrayBuffer());
+      resumeText = data.value;
+    }
 
-let resumeText = "";
+    // ==========================================================
+    // TXT
+    // ==========================================================
 
-// PDF
+    else if (
+      file.name
+        .toLowerCase()
+        .endsWith(".txt")
+    ) {
+      resumeText =
+        buffer.toString("utf-8");
+    }
 
-if (file.name.toLowerCase().endsWith(".pdf")) {
+    // ==========================================================
+    // UNSUPPORTED FILE
+    // ==========================================================
 
-const data = await pdf(buffer);
+    else {
+      return NextResponse.json(
+        {
+          error:
+            "Unsupported file type. Please upload PDF, DOCX, or TXT.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
-resumeText = data.text;
+    // ==========================================================
+    // CHECK EXTRACTED TEXT
+    // ==========================================================
 
-}
+    if (!resumeText.trim()) {
+      return NextResponse.json(
+        {
+          error:
+            "Could not extract text from the resume.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
-// DOCX
+    // ==========================================================
+    // AI PROMPT
+    // ==========================================================
 
-else if (file.name.toLowerCase().endsWith(".docx")) {
-
-const data = await mammoth.extractRawText({ buffer });
-
-resumeText = data.value;
-
-}
-
-// TXT
-
-else if (file.name.toLowerCase().endsWith(".txt")) {
-
-resumeText = buffer.toString("utf-8");
-
-}
-
-// Unsupported
-
-else {
-
-return NextResponse.json(
-
-{
-
-
-
-  error:
-
-
-
-    "Unsupported file type. Please upload PDF, DOCX, or TXT.",
-
-
-
-},
-
-
-
-{ status: 400 }
-
-);
-
-}
-
-if (!resumeText.trim()) {
-
-return NextResponse.json(
-
-{ error: "Could not extract text from the resume." },
-
-
-
-{ status: 400 }
-
-);
-
-}
-
-const prompt = `
+    const prompt = `
 
 Analyze the following resume.
 
@@ -125,11 +138,13 @@ Return ONLY valid JSON in exactly this structure:
   "experienceLevel": "",
   "communicationGaps": [],
   "missingIndustrySkills": [],
+
   "roadmap": [
-  {
-  "stage":"",
-  "keywords":[]
-  }],
+    {
+      "stage": "",
+      "keywords": []
+    }
+  ],
 
   "contactInfo": {
     "name": {
@@ -172,7 +187,14 @@ Return ONLY valid JSON in exactly this structure:
 
   "experience": {
     "present": false,
-    "items": [],
+    "items": [
+      {
+        "title": "",
+        "organization": "",
+        "duration": "",
+        "description": ""
+      }
+    ],
     "suggestion": ""
   },
 
@@ -190,7 +212,11 @@ Return ONLY valid JSON in exactly this structure:
 
   "languages": {
     "present": false,
-    "items": [],
+    "items": [
+      {
+        "language": ""
+      }
+    ],
     "suggestion": ""
   },
 
@@ -242,7 +268,6 @@ Return these findings in "communicationGaps".
 
 Do not invent communication gaps if there is sufficient evidence that the candidate demonstrates strong communication skills.
 
-
 CONTACT INFORMATION CHECK:
 
 Check for:
@@ -260,7 +285,6 @@ For every contact field:
 - Do not invent any value.
 - Give a suggestion if the field is missing or needs improvement.
 
-
 EDUCATION CHECK:
 
 Check for:
@@ -272,7 +296,6 @@ Check for:
 
 Do not invent education details.
 
-
 EXPERIENCE CHECK:
 
 Check for:
@@ -282,10 +305,18 @@ Check for:
 - Training
 - Open-source contributions
 
+For every experience item return:
+
+{
+  "title": "",
+  "organization": "",
+  "duration": "",
+  "description": ""
+}
+
 If experience is missing:
 - Do not invent experience.
 - Suggest gaining genuine practical experience through internships, hackathons, open-source contributions, or substantial projects.
-
 
 PROJECT CHECK:
 
@@ -300,7 +331,6 @@ For projects, check whether the resume includes:
 
 If any important information is missing, explain exactly what should be added.
 
-
 HOBBIES CHECK:
 
 Extract only hobbies genuinely mentioned in the resume.
@@ -309,7 +339,6 @@ If hobbies are missing:
 - Do not invent hobbies.
 - Suggest adding genuine hobbies and interests.
 - Mention that this section is optional.
-
 
 LANGUAGES CHECK:
 
@@ -320,7 +349,6 @@ Include proficiency only if it is mentioned.
 Do not invent languages or proficiency.
 
 If missing, suggest adding languages the candidate genuinely knows.
-
 
 EXTRACURRICULAR ACTIVITIES CHECK:
 
@@ -340,13 +368,11 @@ Extract only genuinely mentioned activities.
 
 Do not invent activities.
 
-
 CERTIFICATIONS AND ACHIEVEMENTS CHECK:
 
 Extract only certifications and achievements genuinely mentioned.
 
 Never invent certifications, awards, ranks, or achievements.
-
 
 MISSING SECTIONS CHECK:
 
@@ -368,7 +394,6 @@ Identify missing sections such as:
 - Hobbies
 - Extracurricular Activities
 
-
 RESUME IMPROVEMENTS:
 
 For every important improvement, provide:
@@ -387,7 +412,6 @@ Clearly explain exactly what the candidate should add or improve.
 
 Never suggest adding fake experience, fake achievements, fake certifications, or fake skills.
 
-
 Calculate "overallScore" using this fixed rubric:
 
 Skills and technical knowledge: 30 points
@@ -396,11 +420,14 @@ Education: 15 points
 Experience/internships: 15 points
 Certifications: 10 points
 Resume quality and completeness: 10 points
-Total: 100 points
+
+Total: 100 points.
 
 Give points only when the resume provides evidence for the category.
 
-Keep the scoring consistent. Do not randomly change the score between analyses of the same resume.
+Keep the scoring consistent.
+
+Do not randomly change the score between analyses of the same resume.
 
 Determine their experience level.
 
@@ -409,12 +436,12 @@ Identify important industry skills that are missing from their resume.
 Do not list a skill as missing if it is already clearly present in the resume.
 
 Consider the candidate's experience level and technical domain when identifying missing industry skills.
-SKILLS TO IMPROVE:
+
 ROADMAP:
 
 Create a visual learning progression for the candidate.
 
-Return ONLY roadmap data in this exact structure:
+Return roadmap data in this exact structure:
 
 "roadmap": [
   {
@@ -436,26 +463,6 @@ Rules:
 - Do not simply copy missingIndustrySkills into roadmap.
 - Roadmap should show the progression of the candidate from their current level toward placement readiness.
 
-Example structure:
-
-"roadmap": [
-  {
-    "stage": "Foundation",
-    "keywords": ["DSA", "OOP", "DBMS"]
-  },
-  {
-    "stage": "Development",
-    "keywords": ["React", "REST APIs", "Git"]
-  },
-  {
-    "stage": "Projects",
-    "keywords": ["Real Project", "GitHub", "Deployment"]
-  },
-  {
-    "stage": "Interview Ready",
-    "keywords": ["Aptitude", "Mock Interview", "HR Round"]
-  }
-]
 IMPORTANT:
 - Never invent information.
 - Never invent name, email, phone number, GitHub, LinkedIn, or portfolio links.
@@ -472,98 +479,175 @@ ${resumeText}
 
 `;
 
-const completion = await groq.chat.completions.create({
+    // ==========================================================
+    // CALL GROQ
+    // ==========================================================
 
-model: "openai/gpt-oss-120b",
+    const completion =
+      await groq.chat.completions.create({
+        model: "openai/gpt-oss-120b",
 
-temperature: 0.3,
+        temperature: 0.3,
 
-response_format: {
+        response_format: {
+          type: "json_object",
+        },
 
-type: "json_object",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an AI resume analyzer. Always return ONLY valid JSON.",
+          },
 
-},
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      });
 
-messages: [
+    // ==========================================================
+    // GET AI RESULT
+    // ==========================================================
 
-{
+    const result =
+      completion.choices[0]?.message?.content;
 
-role: "system",
+    if (!result) {
+      return NextResponse.json(
+        {
+          error:
+            "AI returned an empty result.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
 
-content:
+    // ==========================================================
+    // PARSE AI JSON
+    // ==========================================================
 
-"You are an AI interviewer. Always return ONLY valid JSON.",
+    let analysis;
 
-},
+    try {
+      analysis = JSON.parse(result);
+    } catch (error) {
+      console.error(
+        "AI JSON PARSE ERROR:",
+        error
+      );
 
-{
+      return NextResponse.json(
+        {
+          error:
+            "AI returned invalid JSON.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
 
-role: "user",
+    // ==========================================================
+    // SAVE COMPLETE RESUME ANALYSIS TO MONGODB
+    // ==========================================================
 
-content: prompt,
+    try {
+      const mongoResponse =
+        await fetch(
+          "http://127.0.0.1:5000/api/resume-analysis/save",
+          {
+            method: "POST",
 
-},
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-],
+            body: JSON.stringify({
+              fileName: file.name,
 
-});
+              fileType:
+                file.type ||
+                "unknown",
 
-const result = completion.choices[0]?.message?.content;
+              fileSize:
+                file.size,
 
-if (!result) {
+              extractedText:
+                resumeText,
 
-return NextResponse.json(
+              analysis,
+            }),
+          }
+        );
 
-{ error: "AI returned an empty result." },
+      const mongoData =
+        await mongoResponse.json();
 
+      if (!mongoResponse.ok) {
+  console.error("❌ MONGODB SAVE FAILED");
+  console.error("Status:", mongoResponse.status);
+  console.error("Response:", mongoData);
 
-
-{ status: 500 }
-
-);
-
-}
-let analysis;
-
-try {
-  analysis = JSON.parse(result);
-} catch (error) {
   return NextResponse.json(
-    { error: "AI returned invalid JSON." },
+    {
+      error:
+        mongoData?.error ||
+        mongoData?.message ||
+        "MongoDB save failed.",
+      analysis,
+    },
     { status: 500 }
   );
 }
 
-return NextResponse.json(analysis);
+      console.log(
+        "✅ Resume analysis saved to MongoDB:",
+        mongoData?.resumeAnalysis?._id
+      );
 
-} catch (error) {
+    } catch (mongoError) {
 
-console.error("RESUME ANALYSIS ERROR:", error);
+      console.error(
+        "❌ MONGODB CONNECTION ERROR:",
+        mongoError
+      );
 
-return NextResponse.json(
+      return NextResponse.json(
+        {
+          error:
+            "AI analysis completed, but MongoDB could not be reached.",
+          analysis,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
 
-{
+        // ==========================================================
+    // RETURN ANALYSIS TO FRONTEND
+    // ==========================================================
 
-error:
+    return NextResponse.json(analysis);
 
+  } catch (error) {
+    console.error("❌ RESUME ANALYSIS ERROR:", error);
 
-
-  error instanceof Error
-
-
-
-    ? error.message
-
-
-
-    : "Resume analysis failed.",
-
-},
-
-{ status: 500 }
-
-);
-
-}
-
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while analyzing the resume.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
 }

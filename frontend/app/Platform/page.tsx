@@ -2,881 +2,509 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-interface Course {
-  ncCode?: string;
-  title?: string;
-  explorerInstructorName?: string;
-  instructorInstitute?: string;
-  weeks?: string | number;
-  credits?: string | number;
-  enrollment?: string;
-  openForRegistration?: boolean;
-  url?: string;
-}
+type ResumeAnalysis = {
+  skills?: string[];
+  experienceLevel?: string;
+  missingIndustrySkills?: string[];
+};
 
+type Internship = {
+  id?: string;
+  title: string;
+  company?: string;
+  location?: string;
+  work_type?: string;
+  stipend?: string | number;
+  salary?: string | number;
+  compensation?: string;
+  is_paid?: boolean;
+  paid?: boolean;
+  unpaid?: boolean;
+  description?: string;
+  apply_url?: string;
+  matchedSkills?: string[];
+  matchPercentage?: number;
+};
 
-const internshipPlatforms = [
+const categories = [
+  "All Opportunities",
+  "Engineering & Tech",
+  "Data & AI",
+  "UI/UX Design",
+  "Product & Growth",
+];
+
+const platforms = [
   {
     name: "LinkedIn Internships",
-    subtitle: "Global Professional Network",
+    subtitle: "Professional Network",
+    description: "Search internship roles using skills detected in your resume.",
     icon: "in",
-    description:
-      "Explore millions of student internships with direct recruiter outreach and alumni employee referrals.",
-    button: "Open LinkedIn",
+    url: "https://www.linkedin.com/jobs/search/",
   },
   {
     name: "Internshala",
-    subtitle: "India #1 Student Portal",
-    icon: "🎓",
-    description:
-      "Over 10,000+ verified paid internships with stipend guarantees and fast-track application certificates.",
-    button: "Open Internshala",
+    subtitle: "Student Internship Portal",
+    description: "Explore internships for students and recent graduates.",
+    icon: "IS",
+    url: "https://internshala.com/internships/",
   },
   {
-    name: "Wellfound (AngelList)",
-    subtitle: "High-Growth Startups & YC",
-    icon: "♨",
-    description:
-      "Direct access to founding teams, high equity options, and early-stage startup developer internships.",
-    button: "Open Wellfound",
+    name: "Wellfound",
+    subtitle: "Startup Careers",
+    description: "Find early-stage startup roles related to your interests.",
+    icon: "W",
+    url: "https://wellfound.com/jobs",
   },
   {
-    name: "AICTE Govt Internship Portal",
-    subtitle: "Government of India & PSUs",
-    icon: "🏛",
-    description:
-      "Official portal covering Smart Cities, NHAI, Ministry research labs, and academic credit schemes.",
-    button: "Open AICTE Portal",
-  },
-];
-
-/* =========================================================
-   INTERNSHIP OFFERS
-========================================================= */
-
-const internshipOffers = [
-  {
-    company: "Vercel Ecosystem Labs",
-    title: "Full-Stack Developer Intern",
-    salary: "$3,500/mo",
-    location: "Remote",
-    duration: "3 Months (Summer)",
-    icon: "V",
-    tags: [
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Node.js",
-      "Tailwind CSS",
-      "Git",
-    ],
-    description:
-      "Build high-performance web applications, UI component libraries, and interactive developer interfaces.",
-    applyUrl: "https://www.linkedin.com/jobs/",
-  },
-
-  {
-    company: "Stripe Infrastructure",
-    title: "Backend Systems & API Intern",
-    salary: "₹75,000/mo",
-    location: "Bengaluru / Hybrid",
-    duration: "6 Months",
-    icon: "S",
-    tags: [
-      "Node.js",
-      "Python",
-      "Go",
-      "PostgreSQL",
-      "Docker",
-      "REST API",
-    ],
-    description:
-      "Design resilient microservices, payment webhook handlers, and high-throughput transactional databases.",
-    applyUrl: "https://www.linkedin.com/jobs/",
-  },
-
-  {
-    company: "Hugging Face Open Lab",
-    title: "AI & Machine Learning Research Intern",
-    salary: "$4,000/mo",
-    location: "Remote",
-    duration: "4 Months",
-    icon: "H",
-    tags: [
-      "Python",
-      "PyTorch",
-      "TensorFlow",
-      "NLP",
-      "Transformers",
-    ],
-    description:
-      "Fine-tune open-source LLMs, evaluate diffusion models, and develop reproducible benchmarks.",
-    applyUrl: "https://www.linkedin.com/jobs/",
-  },
-
-  {
-    company: "Microsoft",
-    title: "Software Engineering Intern",
-    salary: "Competitive",
-    location: "Hyderabad / Hybrid",
-    duration: "3 Months",
-    icon: "M",
-    tags: [
-      "C++",
-      "Azure",
-      "Algorithms",
-      "Git",
-      "System Design",
-    ],
-    description:
-      "Work with engineering teams to build reliable software and solve large-scale technical problems.",
-    applyUrl: "https://www.linkedin.com/jobs/",
-  },
-
-  {
-    company: "Google",
-    title: "Data & AI Intern",
-    salary: "Competitive",
-    location: "Bengaluru",
-    duration: "3 Months",
-    icon: "G",
-    tags: [
-      "Python",
-      "SQL",
-      "Machine Learning",
-      "TensorFlow",
-    ],
-    description:
-      "Work on data pipelines, machine learning systems, experimentation, and AI-powered products.",
-    applyUrl: "https://www.linkedin.com/jobs/",
-  },
-
-  {
-    company: "Adobe",
-    title: "UI/UX Product Design Intern",
-    salary: "₹60,000/mo",
-    location: "Noida / Hybrid",
-    duration: "4 Months",
+    name: "AICTE Internship Portal",
+    subtitle: "Government Internship Portal",
+    description: "Browse opportunities from the AICTE internship portal.",
     icon: "A",
-    tags: [
-      "Figma",
-      "UX Research",
-      "Prototyping",
-      "Design Systems",
-    ],
-    description:
-      "Design intuitive product experiences, build prototypes, and collaborate with product teams.",
-    applyUrl: "https://www.linkedin.com/jobs/",
+    url: "https://internship.aicte-india.org/",
   },
 ];
 
-/* =========================================================
-   EXTRA SUGGESTIONS
-========================================================= */
-
-const extraPrograms = [
+const programs = [
   {
-    title: "3D Modelling and Rendering for Virtual Reality",
-    institute: "NITTR Chennai",
-    type: "SWAYAM Portal",
-    credits: "3 University Credits",
-    duration: "8 Weeks (Accredited)",
-    description:
-      "Official Ministry of Education certified course covering VR immersion, shader rendering, and 3D geometric pipelines.",
+    name: "SWAYAM Courses",
+    provider: "SWAYAM",
+    description: "Build skills with courses from universities and industry.",
+    icon: "🎓",
     url: "https://swayam.gov.in/",
+    keywords: ["python", "java", "data", "ai", "machine learning", "cloud"],
   },
-
   {
-    title: "3D Printing of Auxetic Structures: Theory and Practices",
-    institute: "NITTR Chandigarh",
-    type: "SWAYAM Portal",
-    credits: "3 University Credits",
-    duration: "8 Weeks (Accredited)",
-    description:
-      "Advanced additive manufacturing course focusing on auxetic mechanical structures and rapid physical prototyping.",
-    url: "https://swayam.gov.in/",
-  },
-
-  {
-    title: "Major League Hacking (MLH) Fellowship",
-    institute: "Open Source Software Track",
-    type: "Fellowship",
-    credits: "High Impact Fellowship",
-    duration: "12 Weeks (Remote)",
-    description:
-      "Build real-world open-source software, collaborate with developers globally, and strengthen your engineering portfolio.",
+    name: "MLH Fellowships",
+    provider: "Major League Hacking",
+    description: "Gain practical experience through collaborative projects.",
+    icon: "💻",
     url: "https://fellowship.mlh.io/",
+    keywords: ["software", "developer", "engineering", "web", "github"],
   },
-
   {
-    title: "Artificial Intelligence and Machine Learning",
-    institute: "SWAYAM",
-    type: "Certified Course",
-    credits: "3 University Credits",
-    duration: "8 Weeks",
-    description:
-      "Build a strong foundation in artificial intelligence, machine learning models, and practical applications.",
-    url: "https://swayam.gov.in/",
+    name: "Kaggle",
+    provider: "Kaggle",
+    description: "Practice data science and machine learning with projects.",
+    icon: "📊",
+    url: "https://www.kaggle.com/",
+    keywords: ["data", "python", "machine learning", "ai", "analytics"],
   },
 ];
 
-/* =========================================================
-   COMPONENT
-========================================================= */
+function getPayStatus(internship: Internship) {
+  if (internship.unpaid === true) return "Unpaid";
+  if (internship.is_paid === false || internship.paid === false) return "Unpaid";
+  if (internship.is_paid === true || internship.paid === true) return "Paid";
 
-export default function Home() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] =
-    useState("All Opportunities");
+  const raw = String(
+    internship.stipend ?? internship.salary ?? internship.compensation ?? ""
+  ).trim();
+  const value = raw.toLowerCase();
 
-  /* =======================================================
-     LOAD SWAYAM COURSES
-  ======================================================= */
-
-  useEffect(() => {
-    fetch("/swayam_courses.json")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to load swayam_courses.json");
-        }
-
-        return response.json();
-      })
-      .then((data: Course[]) => {
-        setCourses(data);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(err.message);
-      });
-  }, []);
-
-  /* =======================================================
-     SEARCH
-  ======================================================= */
-
-  const filteredOffers = useMemo(() => {
-    if (!search.trim()) return internshipOffers;
-
-    const query = search.toLowerCase();
-
-    return internshipOffers.filter((offer) =>
-      [
-        offer.title,
-        offer.company,
-        offer.description,
-        offer.location,
-        ...offer.tags,
-      ].some((value) =>
-        value.toLowerCase().includes(query)
-      )
-    );
-  }, [search]);
-
-  const filteredPlatforms = useMemo(() => {
-    if (!search.trim()) return internshipPlatforms;
-
-    const query = search.toLowerCase();
-
-    return internshipPlatforms.filter((platform) =>
-      [
-        platform.name,
-        platform.subtitle,
-        platform.description,
-      ].some((value) =>
-        value.toLowerCase().includes(query)
-      )
-    );
-  }, [search]);
-
-  const filteredPrograms = useMemo(() => {
-    if (!search.trim()) return extraPrograms;
-
-    const query = search.toLowerCase();
-
-    return extraPrograms.filter((program) =>
-      [
-        program.title,
-        program.institute,
-        program.type,
-        program.description,
-      ].some((value) =>
-        value.toLowerCase().includes(query)
-      )
-    );
-  }, [search]);
-
-  /* =======================================================
-     ERROR
-  ======================================================= */
-
-  if (error) {
-    return (
-      <main className="min-h-screen bg-[#f8f4ec] flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl shadow-md p-8 max-w-md text-center border border-[#e8ddce]">
-
-          <div className="text-5xl mb-4">
-            ⚠️
-          </div>
-
-          <h1 className="text-2xl font-extrabold text-[#34261d]">
-            Something went wrong
-          </h1>
-
-          <p className="text-[#766b61] mt-3">
-            {error}
-          </p>
-
-        </div>
-      </main>
-    );
+  if (!value || /not listed|not specified|n\/a|unknown/.test(value)) {
+    return "Pay not listed";
   }
 
+  if (/unpaid|no stipend|not paid|volunteer/.test(value)) {
+    return "Unpaid";
+  }
+
+  const amount = Number(value.replace(/[^\d.-]/g, ""));
+  if (!Number.isNaN(amount)) return amount > 0 ? "Paid" : "Unpaid";
+
+  return "Paid";
+}
+
+function getPlatformUrl(url: string, skills: string[]) {
+  const query = [...skills.slice(0, 4), "internship"].join(" ");
+  return `${url}?keywords=${encodeURIComponent(query)}`;
+}
+
+export default function PlatformPage() {
+  const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
+  const [internships, setInternships] = useState<Internship[]>([]);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All Opportunities");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadInternships(isRefresh = false) {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+
+    setError("");
+
+    try {
+      const savedAnalysis = localStorage.getItem("resumeAnalysis");
+
+      if (!savedAnalysis) {
+        setError("Upload and analyze your resume to get personalized results.");
+        setInternships([]);
+        return;
+      }
+
+      const resume: ResumeAnalysis = JSON.parse(savedAnalysis);
+      setAnalysis(resume);
+
+      const response = await fetch("/api/internships", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          skills: resume.skills ?? [],
+          missingIndustrySkills: resume.missingIndustrySkills ?? [],
+          experienceLevel: resume.experienceLevel ?? "",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not load internship listings.");
+      }
+
+      setInternships(Array.isArray(data.internships) ? data.internships : []);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not load internship listings."
+      );
+      setInternships([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadInternships();
+  }, []);
+
+  const filteredInternships = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return internships.filter((internship) => {
+      const text = [
+        internship.title,
+        internship.company,
+        internship.location,
+        internship.work_type,
+        internship.description,
+        ...(internship.matchedSkills ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch = !query || text.includes(query);
+
+      let matchesCategory = true;
+      if (category === "Engineering & Tech") {
+        matchesCategory =
+          /software|developer|engineering|backend|frontend|web|mobile|cloud|devops|computer|technology|react|node|java|python|javascript/.test(
+            text
+          );
+      } else if (category === "Data & AI") {
+        matchesCategory =
+          /data|machine learning|artificial intelligence|\bai\b|analytics|python|sql|tensorflow|pytorch/.test(
+            text
+          );
+      } else if (category === "UI/UX Design") {
+        matchesCategory = /ui|ux|design|figma|product design|user experience/.test(text);
+      } else if (category === "Product & Growth") {
+        matchesCategory = /product|marketing|growth|business|sales|management/.test(text);
+      }
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [internships, search, category]);
+
+  const recommendedPrograms = useMemo(() => {
+    const skills = [
+      ...(analysis?.skills ?? []),
+      ...(analysis?.missingIndustrySkills ?? []),
+    ].map((skill) => skill.toLowerCase());
+
+    return [...programs].sort((a, b) => {
+      const score = (keywords: string[]) =>
+        skills.filter((skill) =>
+          keywords.some((keyword) => skill.includes(keyword))
+        ).length;
+
+      return score(b.keywords) - score(a.keywords);
+    });
+  }, [analysis]);
+
   return (
-    <main className="min-h-screen bg-[#f8f4ec] text-[#34261d]">
-
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
-
-      <header className="pt-6 pb-5 px-5 md:px-8">
-
-        <div className="max-w-[1500px] mx-auto text-center">
-
-          <h1 className="text-3xl md:text-4xl lg:text-[42px] font-extrabold tracking-tight">
-
-            Navigate Your{" "}
-
-            <span className="text-[#c66b18]">
-              Internship
-            </span>{" "}
-
-            &{" "}
-
-            <span className="text-[#a66b42]">
-              Career Opportunities
-            </span>
-
-          </h1>
-
-          <p className="mt-3 text-sm md:text-base text-[#81766c] max-w-3xl mx-auto">
-            Explore major internship platforms, discover curated internship
-            offers, and unlock extra growth opportunities including certified
-            SWAYAM university courses and fellowships.
-          </p>
-
-        </div>
-
+    <main className="min-h-screen bg-[#FBF7F0] text-[#3F3026]">
+      <header className="px-5 pb-6 pt-10 text-center md:px-10">
+        <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl">
+          Navigate Your{" "}
+          <span className="text-[#A67B5B]">
+            Internship &amp; Career Opportunities
+          </span>
+        </h1>
+        <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-[#7A6B5D] md:text-base">
+          Explore internship platforms, resume-matched offers, and suggestions
+          based on your skills.
+        </p>
       </header>
 
-      {/* =====================================================
-          SEARCH BAR
-      ===================================================== */}
-
-      <section className="px-5 md:px-8">
-
-        <div className="max-w-[1500px] mx-auto">
-
-          <div className="bg-white rounded-[26px] border border-[#e8dfd4] p-3 shadow-sm">
-
-            <div className="flex flex-col xl:flex-row gap-3">
-
-              {/* SEARCH */}
-
-              <div className="relative flex-1">
-
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[#a19890] text-xl">
-                  🔍
-                </span>
-
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search internships, platforms, or courses..."
-                  className="w-full h-12 rounded-2xl border border-[#eee6dc] bg-[#fffdfa] pl-12 pr-5 outline-none text-sm placeholder:text-[#aaa097] focus:border-[#c77a2b]"
-                />
-
-              </div>
-
-              {/* FILTERS */}
-
-              <div className="flex gap-2 overflow-x-auto">
-
-                {[
-                  "All Opportunities",
-                  "Engineering & Tech",
-                  "Data & AI",
-                  "UI/UX Design",
-                  "Product & Growth",
-                ].map((category) => (
-
-                  <button
-                    key={category}
-                    onClick={() =>
-                      setActiveCategory(category)
-                    }
-                    className={`h-12 px-5 rounded-full whitespace-nowrap text-sm font-semibold border transition ${
-                      activeCategory === category
-                        ? "bg-[#a97556] text-white border-[#a97556]"
-                        : "bg-white text-[#665b53] border-[#e6ddd3] hover:bg-[#fff8ef]"
-                    }`}
-                  >
-                    {category}
-                  </button>
-
-                ))}
-
-              </div>
-
-            </div>
-
+      <div className="mx-auto max-w-[1500px] px-5 pb-10 md:px-8">
+        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[#E5D8C9] bg-white p-4 md:flex-row">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search internships, platforms, or courses..."
+            className="min-w-0 flex-1 rounded-xl border border-[#E5D8C9] px-4 py-3 text-sm outline-none focus:border-[#A67B5B]"
+          />
+          <div className="flex flex-wrap gap-2">
+            {categories.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(item)}
+                className={`rounded-xl px-4 py-3 text-sm font-semibold ${
+                  category === item
+                    ? "bg-[#A67B5B] text-white"
+                    : "border border-[#E5D8C9] bg-white text-[#5F5044] hover:bg-[#F6EBDD]"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
           </div>
-
         </div>
 
-      </section>
-
-      {/* =====================================================
-          THREE COLUMNS
-      ===================================================== */}
-
-      <section className="max-w-[1500px] mx-auto px-5 md:px-8 py-7">
-
-        {/* IMPORTANT:
-            lg:grid-cols-3 = THREE EQUAL COLUMNS
-        */}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-
-          {/* =================================================
-              COLUMN 1
-              INTERNSHIP PLATFORMS
-          ================================================= */}
-
-          <div className="bg-[#fffdf9] rounded-[25px] border border-[#e7ddcf] overflow-hidden">
-
-            <div className="border-t-4 border-[#d07818] p-5">
-
-              <div className="flex items-center justify-between gap-3">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="w-10 h-10 rounded-xl bg-[#fff0c8] flex items-center justify-center">
-                    🌐
-                  </div>
-
-                  <div>
-
-                    <h2 className="text-lg font-extrabold">
-                      Internship Platforms
-                    </h2>
-
-                    <p className="text-xs text-[#91867b]">
-                      Major portals with instant search triggers
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <span className="bg-[#fff0c8] text-[#8c681c] px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
-                  8 Platforms
-                </span>
-
-              </div>
-
-              <div className="border-b border-[#eee6dc] mt-4" />
-
+        <div className="grid items-start gap-6 lg:grid-cols-3">
+          {/* Internship platforms */}
+          <section>
+            <div className="mb-3 border-t-4 border-[#A67B5B] pt-4">
+              <h2 className="text-lg font-bold">🌐 Internship Platforms</h2>
+              <p className="text-xs text-[#8B7A6B]">
+                Search portals using your resume skills
+              </p>
             </div>
 
-            <div className="px-4 pb-5 space-y-3">
-
-              {filteredPlatforms.map((platform) => (
-
-                <div
+            <div className="space-y-4">
+              {platforms.map((platform) => (
+                <article
                   key={platform.name}
-                  className="bg-white rounded-[20px] border border-[#ebe2d7] p-4 hover:shadow-md transition"
+                  className="flex min-h-52 flex-col rounded-2xl border border-[#E5D8C9] bg-white p-5 shadow-sm"
                 >
-
-                  {/* TOP */}
-
-                  <div className="flex gap-3">
-
-                    <div className="w-11 h-11 shrink-0 rounded-xl bg-[#fff0c8] flex items-center justify-center font-extrabold text-[#3477b5]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F2E4D3] font-bold text-[#A67B5B]">
                       {platform.icon}
                     </div>
-
                     <div>
-
-                      <h3 className="font-extrabold text-[15px]">
-                        {platform.name}
-                      </h3>
-
-                      <p className="text-xs text-[#91867b] mt-1">
-                        {platform.subtitle}
-                      </p>
-
+                      <h3 className="font-bold">{platform.name}</h3>
+                      <p className="text-xs text-[#927F70]">{platform.subtitle}</p>
                     </div>
-
                   </div>
-
-                  {/* DESCRIPTION */}
-
-                  <p className="text-sm text-[#756b62] leading-relaxed mt-4">
+                  <p className="mt-4 flex-1 text-sm leading-6 text-[#75675D]">
                     {platform.description}
                   </p>
-
-                  {/* FOOTER */}
-
-                  <div className="flex items-center justify-between border-t border-[#eee7df] mt-4 pt-3">
-
-                    <span className="text-[11px] font-bold text-[#bd761f]">
-                      ● Verified Portal
-                    </span>
-
-                    <a
-                      href="#"
-                      className="bg-[#fff1c9] hover:bg-[#fbe5aa] text-[#865c20] px-4 py-2.5 rounded-xl text-xs font-bold transition"
-                    >
-                      {platform.button} ↗
-                    </a>
-
-                  </div>
-
-                </div>
-
+                  <a
+                    href={getPlatformUrl(platform.url, analysis?.skills ?? [])}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 self-start rounded-xl bg-[#F0D6B5] px-4 py-2 text-xs font-bold text-[#754D32] hover:bg-[#E5C49D]"
+                  >
+                    Search platform ↗
+                  </a>
+                </article>
               ))}
-
             </div>
+          </section>
 
-          </div>
-
-          {/* =================================================
-              COLUMN 2
-              INTERNSHIP OFFERS
-          ================================================= */}
-
-          <div className="bg-[#fffdf9] rounded-[25px] border border-[#e7ddcf] overflow-hidden">
-
-            <div className="border-t-4 border-[#9d745d] p-5">
-
-              <div className="flex items-center justify-between gap-3">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="w-10 h-10 rounded-xl bg-[#f5e9df] flex items-center justify-center">
-                    💼
-                  </div>
-
-                  <div>
-
-                    <h2 className="text-lg font-extrabold">
-                      Internship Offers
-                    </h2>
-
-                    <p className="text-xs text-[#91867b]">
-                      Curated internship listings & direct roles
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <span className="bg-[#f5e8df] text-[#866451] px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
-                  8 Offers
-                </span>
-
+          {/* Live matched internships */}
+          <section>
+            <div className="mb-3 flex items-center justify-between border-t-4 border-[#A67B5B] pt-4">
+              <div>
+                <h2 className="text-lg font-bold">💼 Internship Offers</h2>
+                <p className="text-xs text-[#8B7A6B]">
+                  Live listings matched to your resume
+                </p>
               </div>
-
-              <div className="border-b border-[#eee6dc] mt-4" />
-
+              <span className="rounded-full bg-[#F0E0CD] px-3 py-1 text-xs font-semibold text-[#825A3B]">
+                {loading ? "Loading…" : `${filteredInternships.length} Offers`}
+              </span>
             </div>
 
-            <div className="px-4 pb-5 space-y-3">
+            <button
+              type="button"
+              onClick={() => void loadInternships(true)}
+              disabled={loading || refreshing}
+              className="mb-4 rounded-lg border border-[#D8C8B8] bg-white px-3 py-2 text-xs font-semibold text-[#754D32] hover:bg-[#F6EBDD] disabled:opacity-60"
+            >
+              {refreshing ? "Refreshing…" : "Refresh offers"}
+            </button>
 
-              {filteredOffers.map((offer) => (
-
-                <div
-                  key={offer.title}
-                  className="bg-white rounded-[20px] border border-[#ebe2d7] p-4 hover:shadow-md transition"
-                >
-
-                  {/* TITLE */}
-
-                  <div className="flex gap-3">
-
-                    <div className="w-11 h-11 shrink-0 rounded-xl bg-[#fff0c8] flex items-center justify-center font-extrabold text-[#bd7621]">
-                      {offer.icon}
-                    </div>
-
-                    <div className="flex-1">
-
-                      <div className="flex justify-between gap-2">
-
-                        <div>
-
-                          <h3 className="font-extrabold text-[15px] leading-snug">
-                            {offer.title}
-                          </h3>
-
-                          <p className="text-xs text-[#756b62] mt-1">
-                            ▣ {offer.company}
-                          </p>
-
+            {loading ? (
+              <div className="rounded-2xl border border-[#E5D8C9] bg-white p-8 text-center text-sm text-[#75675D]">
+                Finding internships that match your resume…
+              </div>
+            ) : error ? (
+              <div className="rounded-2xl border border-amber-200 bg-white p-6 text-sm text-amber-800">
+                {error}
+              </div>
+            ) : filteredInternships.length === 0 ? (
+              <div className="rounded-2xl border border-[#E5D8C9] bg-white p-8 text-center">
+                <h3 className="font-bold">No internship listings received</h3>
+                <p className="mt-2 text-sm text-[#75675D]">
+                  Try refreshing. If this continues, check the `/api/internships`
+                  route and its external API response.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredInternships.map((internship, index) => (
+                  <article
+                    key={
+                      internship.id ??
+                      `${internship.title}-${internship.company ?? "company"}-${index}`
+                    }
+                    className="rounded-2xl border border-[#E5D8C9] bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F2E2CF] font-bold text-[#A67B5B]">
+                          {internship.company?.charAt(0).toUpperCase() ?? "I"}
                         </div>
-
-                        <button className="text-[#9a9087] text-xl hover:text-[#9b694c]">
-                          ♡
-                        </button>
-
+                        <div className="min-w-0">
+                          <h3 className="font-bold">{internship.title}</h3>
+                          {internship.company && (
+                            <p className="mt-1 text-xs text-[#8A7565]">
+                              {internship.company}
+                            </p>
+                          )}
+                        </div>
                       </div>
-
-                    </div>
-
-                  </div>
-
-                  {/* META */}
-
-                  <div className="flex flex-wrap gap-2 mt-4">
-
-                    <span className="bg-[#fff0c5] text-[#8d6320] px-2.5 py-1 rounded-full text-[11px] font-bold">
-                      ⚡ {offer.salary}
-                    </span>
-
-                    <span className="bg-[#f8e9df] text-[#765b4e] px-2.5 py-1 rounded-full text-[11px] font-bold">
-                      📍 {offer.location}
-                    </span>
-
-                    <span className="bg-[#fff0c5] text-[#8d6320] px-2.5 py-1 rounded-full text-[11px] font-bold">
-                      ◷ {offer.duration}
-                    </span>
-
-                  </div>
-
-                  {/* DESCRIPTION */}
-
-                  <p className="text-sm text-[#756b62] leading-relaxed mt-3">
-                    {offer.description}
-                  </p>
-
-                  {/* SKILLS */}
-
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-
-                    {offer.tags.map((tag) => (
-
-                      <span
-                        key={tag}
-                        className="bg-[#fff5d9] border border-[#f0dfad] text-[#81652f] px-2.5 py-1 rounded-full text-[10px] font-semibold"
-                      >
-                        {tag}
+                      <span className="shrink-0 rounded-full bg-[#F0E0CD] px-2.5 py-1 text-xs font-bold text-[#825A3B]">
+                        {internship.matchPercentage ?? 0}% match
                       </span>
-
-                    ))}
-
-                  </div>
-
-                  {/* =========================================
-                      BOTTOM ACTIONS
-                      THIS IS THE APPLY NOW BUTTON
-                  ========================================= */}
-
-                  <div className="flex items-center justify-between border-t border-[#eee7df] mt-4 pt-3">
-
-                    <button className="text-xs font-bold text-[#625850] hover:text-[#a86c43]">
-                      ● View Details
-                    </button>
-
-                    <a
-                      href={offer.applyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 bg-[#ae7859] hover:bg-[#966247] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-sm transition"
-                    >
-                      Apply Now ↗
-                    </a>
-
-                  </div>
-
-                </div>
-
-              ))}
-
-            </div>
-
-          </div>
-
-          {/* =================================================
-              COLUMN 3
-              EXTRA SUGGESTIONS
-          ================================================= */}
-
-          <div className="bg-[#fffdf9] rounded-[25px] border border-[#e7ddcf] overflow-hidden">
-
-            <div className="border-t-4 border-[#bc6619] p-5">
-
-              <div className="flex items-center justify-between gap-3">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="w-10 h-10 rounded-xl bg-[#fff0c8] flex items-center justify-center">
-                    💡
-                  </div>
-
-                  <div>
-
-                    <h2 className="text-lg font-extrabold">
-                      Extra Suggestions
-                    </h2>
-
-                    <p className="text-xs text-[#91867b]">
-                      SWAYAM university courses & fellowships
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <span className="bg-[#fff0c8] text-[#8c681c] px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
-                  6 Programs
-                </span>
-
-              </div>
-
-              <div className="border-b border-[#eee6dc] mt-4" />
-
-            </div>
-
-            <div className="px-4 pb-5 space-y-3">
-
-              {filteredPrograms.map((program) => (
-
-                <div
-                  key={program.title}
-                  className="bg-white rounded-[20px] border border-[#ebe2d7] p-4 hover:shadow-md transition"
-                >
-
-                  {/* TITLE */}
-
-                  <div className="flex gap-3">
-
-                    <div className="w-11 h-11 shrink-0 rounded-xl bg-[#fff0c8] flex items-center justify-center text-lg">
-                      🎓
                     </div>
 
-                    <div className="flex-1">
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      {internship.location && (
+                        <span className="rounded-full bg-[#F1E8DE] px-3 py-1">
+                          📍 {internship.location}
+                        </span>
+                      )}
+                      {internship.work_type && (
+                        <span className="rounded-full bg-[#F1E8DE] px-3 py-1">
+                          {internship.work_type}
+                        </span>
+                      )}
+                      <span className="rounded-full bg-[#F5DFC3] px-3 py-1 text-[#795333]">
+                        {getPayStatus(internship)}
+                        {(internship.stipend ?? internship.salary) != null &&
+                          ` · ${internship.stipend ?? internship.salary}`}
+                      </span>
+                    </div>
 
-                      <div className="flex justify-between gap-2">
+                    {internship.description && (
+                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#75675D]">
+                        {internship.description}
+                      </p>
+                    )}
 
-                        <div>
-
-                          <h3 className="font-extrabold text-[15px] leading-snug">
-                            {program.title}
-                          </h3>
-
-                          <p className="text-xs text-[#756b62] mt-2">
-                            🏛 {program.institute} • {program.type}
-                          </p>
-
-                        </div>
-
-                        <button className="text-[#9a9087] text-xl">
-                          ♡
-                        </button>
-
+                    {!!internship.matchedSkills?.length && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {internship.matchedSkills.slice(0, 5).map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-full bg-[#EFE0CC] px-3 py-1 text-xs text-[#765034]"
+                          >
+                            {skill}
+                          </span>
+                        ))}
                       </div>
+                    )}
 
+                    <div className="mt-4 flex items-center justify-between border-t border-[#EEE3D7] pt-3">
+                      <span className="text-xs text-[#857366]">Resume match</span>
+                      {internship.apply_url ? (
+                        <a
+                          href={internship.apply_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-xl bg-[#A67B5B] px-4 py-2 text-xs font-bold text-white hover:bg-[#8E674A]"
+                        >
+                          Apply now ↗
+                        </a>
+                      ) : (
+                        <span className="text-xs text-[#9B8979]">
+                          Apply link unavailable
+                        </span>
+                      )}
                     </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
-                  </div>
+          {/* Growth suggestions */}
+          <section>
+            <div className="mb-3 border-t-4 border-[#A67B5B] pt-4">
+              <h2 className="text-lg font-bold">💡 Extra Suggestions</h2>
+              <p className="text-xs text-[#8B7A6B]">
+                Programs related to your skills and focus areas
+              </p>
+            </div>
 
-                  {/* META */}
-
-                  <div className="flex flex-wrap gap-2 mt-4">
-
-                    <span className="bg-[#fff0c5] text-[#8d6320] px-2.5 py-1 rounded-full text-[11px] font-bold">
-                      {program.credits}
+            {analysis?.missingIndustrySkills?.length ? (
+              <div className="mb-4 rounded-2xl border border-[#E6D7C5] bg-[#F8F0E4] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#98704F]">
+                  Resume focus areas
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {analysis.missingIndustrySkills.slice(0, 6).map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full bg-[#EBD7BF] px-3 py-1 text-xs text-[#754D32]"
+                    >
+                      {skill}
                     </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
-                    <span className="bg-[#fff0c5] text-[#8d6320] px-2.5 py-1 rounded-full text-[11px] font-bold">
-                      ◷ {program.duration}
-                    </span>
-
+            <div className="space-y-4">
+              {recommendedPrograms.map((program) => (
+                <article
+                  key={program.name}
+                  className="flex min-h-52 flex-col rounded-2xl border border-[#E5D8C9] bg-white p-5 shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F3E3CF] text-xl">
+                      {program.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold">{program.name}</h3>
+                      <p className="text-xs text-[#927F70]">{program.provider}</p>
+                    </div>
                   </div>
-
-                  {/* DESCRIPTION */}
-
-                  <p className="text-sm text-[#756b62] leading-relaxed mt-3">
+                  <p className="mt-4 flex-1 text-sm leading-6 text-[#75675D]">
                     {program.description}
                   </p>
-
-                  {/* WHY IT HELPS */}
-
-                  <div className="mt-3 bg-[#fff4c9] border border-[#efdfa6] rounded-xl p-3">
-
-                    <p className="text-[11px] text-[#755c25] leading-relaxed">
-
-                      💡 <strong>Why it helps:</strong>{" "}
-                      Earn transferable university grade credits directly
-                      accredited by AICTE/UGC.
-
-                    </p>
-
-                  </div>
-
-                  {/* ACTIONS */}
-
-                  <div className="flex items-center justify-between border-t border-[#eee7df] mt-4 pt-3">
-
-                    <button className="text-xs font-bold text-[#625850]">
-                      ● Details
-                    </button>
-
-                    <a
-                      href={program.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-[#c56812] hover:bg-[#aa570b] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition"
-                    >
-                      Enroll on SWAYAM ↗
-                    </a>
-
-                  </div>
-
-                </div>
-
+                  <a
+                    href={program.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 self-start rounded-xl bg-[#A67B5B] px-4 py-2 text-xs font-bold text-white hover:bg-[#8E674A]"
+                  >
+                    Explore ↗
+                  </a>
+                </article>
               ))}
-
             </div>
-
-          </div>
-
+          </section>
         </div>
-
-      </section>
-
-      {/* =====================================================
-          FOOTER
-      ===================================================== */}
-
-      <footer className="border-t border-[#e6dccf] mt-3">
-
-        <div className="max-w-[1500px] mx-auto px-6 py-6 flex justify-between items-center">
-
-          <p className="text-xs text-[#8c8177]">
-            © 2026 Career Opportunity Explorer
-          </p>
-
-          <p className="text-xs text-[#a09286]">
-            Explore • Learn • Grow
-          </p>
-
-        </div>
-
-      </footer>
-
+      </div>
     </main>
   );
 }
