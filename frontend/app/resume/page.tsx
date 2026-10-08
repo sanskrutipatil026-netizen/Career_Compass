@@ -8,119 +8,177 @@ export default function ResumePage() {
 
   const [resume, setResume] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-const handleAnalyze = async () => {
-  if (!resume) {
-    alert("Please upload your resume.");
-    return;
-  }
 
-  setLoading(true);
-
-  try {
-    const formData = new FormData();
-    formData.append("resume", resume);
-
-    const response = await fetch("/api/interview/resume-analysis", {
-      method: "POST",
-      body: formData,
-    });
-
-    const responseText = await response.text();
-
-    console.log("STATUS:", response.status);
-    console.log("RESPONSE:", responseText);
-
-    if (!response.ok) {
-      alert(`Server Error ${response.status}:\n${responseText}`);
+  const handleAnalyze = async () => {
+    if (!resume) {
+      alert("Please upload your resume.");
       return;
     }
-const data = JSON.parse(responseText);
 
-console.log("API DATA:", data);
+    if (resume.size > 5 * 1024 * 1024) {
+      alert("Resume file must be less than 5 MB.");
+      return;
+    }
 
-let analysisData =
-  data.result ??
-  data.analysis ??
-  data;
+    setLoading(true);
 
-if (typeof analysisData === "string") {
-  analysisData = JSON.parse(analysisData);
-}
+    try {
+      const formData = new FormData();
+      formData.append("resume", resume);
 
-console.log("FINAL ANALYSIS:", analysisData);
+      const response = await fetch(
+        "/api/interview/resume-analysis",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-if (!analysisData) {
-  throw new Error("Resume analysis data is empty.");
-}
+      const responseText = await response.text();
 
-localStorage.setItem(
-  "resumeAnalysis",
-  JSON.stringify(analysisData)
-);
+      console.log("STATUS:", response.status);
+      console.log("RESPONSE:", responseText);
 
-console.log(
-  "SAVED TO LOCAL STORAGE:",
-  localStorage.getItem("resumeAnalysis")
-);
+      if (!response.ok) {
+        let errorMessage = `Server Error ${response.status}`;
 
-router.push("/resume/result");
-    
-  } catch (error) {
-    console.error("FRONTEND ERROR:", error);
+        try {
+          const errorData = JSON.parse(responseText);
 
-    alert(
-      error instanceof Error
-        ? error.message
-        : "Something went wrong."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+          if (errorData?.error) {
+            errorMessage = errorData.error;
+          } else if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Keep default error
+        }
+
+        alert(errorMessage);
+        return;
+      }
+
+      const data = JSON.parse(responseText);
+
+      console.log("API DATA:", data);
+
+      if (!data) {
+        throw new Error(
+          "Resume analysis data is empty."
+        );
+      }
+
+      alert(
+        "Resume analyzed successfully!"
+      );
+
+      router.push("/resume/result");
+    } catch (error) {
+      console.error(
+        "FRONTEND ERROR:",
+        error
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-amber-100">
 
+      {/* NAVBAR */}
 
       <nav className="bg-[#A67B5B] shadow px-8 py-4 flex justify-between">
 
         <div className="flex items-center gap-2">
+
           <div className="w-10 h-10 rounded-xl bg-amber-100 text-[#A67B5B] flex items-center justify-center font-bold">
             AI
           </div>
 
           <div>
+
             <h1 className="font-bold text-amber-100 text-lg">
-              Carrer Compass
+              Career Compass
             </h1>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-200">
               AI POWERED
             </p>
+
           </div>
-        </div>
-        <div className="flex gap-8 font -md">
-  <button className="text-gray-200 hover:text-blue-500" onClick={() => router.push("/dashboard")} >⚡Dashboard</button>
-  <button onClick={() => router.push("/interview")} className="text-gray-200 hover:text-blue-500">🎯Practice</button>
-  <button onClick={() => router.push("/history")} className="text-gray-200 hover:text-blue-500">📊My Sessions</button>
 
-</div>
-<div className="flex items-center gap-4">
+        </div>
+
+        <div className="flex gap-8 font-medium">
+
+          <button
+            className="text-gray-200 hover:text-blue-500"
+            onClick={() =>
+              router.push("/dashboard")
+            }
+          >
+            ⚡Dashboard
+          </button>
+
+          <button
+            onClick={() =>
+              router.push("/interview")
+            }
+            className="text-gray-200 hover:text-blue-500"
+          >
+            🎯Practice
+          </button>
+
+          <button
+            onClick={() =>
+              router.push("/history")
+            }
+            className="text-gray-200 hover:text-blue-500"
+          >
+            📊My Sessions
+          </button>
+
+        </div>
+
+        <div className="flex items-center gap-4">
+
           <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-2">
-       <div className="w-8 h-8 rounded-full bg-[#A67B5B] text-white flex items-center justify-center font-bold">U</div>
-      <span className="font-md text-black">Hi,</span>
-      <span className="font-bold text-black">User</span>
-      </div>
-        <button className="bg-gray-100 text-black px-5 py-2 rounded-full">
-          Logout
-        </button>
-        </div>
 
-        
+            <div className="w-8 h-8 rounded-full bg-[#A67B5B] text-white flex items-center justify-center font-bold">
+              U
+            </div>
+
+            <span className="font-medium text-black">
+              Hi,
+            </span>
+
+            <span className="font-bold text-black">
+              User
+            </span>
+
+          </div>
+
+          <button
+            className="bg-gray-100 text-black px-5 py-2 rounded-full"
+            onClick={() =>
+              router.push("/login")
+            }
+          >
+            Logout
+          </button>
+
+        </div>
 
       </nav>
 
-     
+      {/* MAIN */}
 
       <div className="max-w-5xl mx-auto mt-10 bg-white rounded-xl shadow p-8">
 
@@ -129,14 +187,16 @@ router.push("/resume/result");
         </h2>
 
         <p className="text-gray-400 mb-8">
-          Upload your resume-Get domain recommendations
+          Upload your resume - Get domain recommendations
         </p>
 
-       
+        {/* UPLOAD */}
 
         <label className="border-2 border-dashed border-gray-300 rounded-xl h-64 flex flex-col justify-center items-center cursor-pointer hover:border-blue-500">
 
-          <div className="text-6xl">☁️</div>
+          <div className="text-6xl">
+            ☁️
+          </div>
 
           <h2 className="font-semibold text-xl mt-4">
             Drop your resume here
@@ -147,7 +207,7 @@ router.push("/resume/result");
           </p>
 
           <p className="text-gray-400 text-sm">
-            PDF, DOC, DOCX,TXT(Max 5MB)
+            PDF, DOC, DOCX, TXT (Max 5MB)
           </p>
 
           <input
@@ -155,18 +215,22 @@ router.push("/resume/result");
             accept=".pdf,.doc,.docx,.txt"
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) {
-                setResume(e.target.files[0]);
+              if (
+                e.target.files &&
+                e.target.files.length > 0
+              ) {
+                setResume(
+                  e.target.files[0]
+                );
               }
             }}
           />
 
         </label>
 
-        
+        {/* SELECTED FILE */}
 
         {resume && (
-
           <div className="mt-6 border rounded-xl p-4">
 
             <h2 className="font-semibold text-black">
@@ -178,48 +242,76 @@ router.push("/resume/result");
             </p>
 
           </div>
-
         )}
 
-       
+        {/* FEATURES */}
 
         <div className="grid grid-cols-2 gap-5 mt-8">
 
           <div className="border rounded-lg p-5">
-            <h3 className="font-bold text-black">🔍Skills Detection</h3>
+
+            <h3 className="font-bold text-black">
+              🔍 Skills Detection
+            </h3>
+
             <p className="text-gray-400">
               Frameworks, Languages, Tools
             </p>
+
           </div>
 
           <div className="border rounded-lg p-5">
-            <h3 className="font-bold text-black">📊Experience Level</h3>
+
+            <h3 className="font-bold text-black">
+              📊 Experience Level
+            </h3>
+
             <p className="text-gray-400">
               Junior / Mid / Senior
             </p>
+
           </div>
 
           <div className="border rounded-lg p-5">
-            <h3 className="font-bold text-black">🎯Domain Matching</h3>
+
+            <h3 className="font-bold text-black">
+              🎯 Domain Matching
+            </h3>
+
             <p className="text-gray-400">
               Best-fit Interview Areas
             </p>
+
           </div>
 
           <div className="border rounded-lg p-5">
-            <h3 className="font-bold text-black">💪Strength Analysis</h3>
+
+            <h3 className="font-bold text-black">
+              💪 Strength Analysis
+            </h3>
+
             <p className="text-gray-400">
               Your Competitive Edge
             </p>
+
           </div>
 
         </div>
 
+        {/* ANALYZE */}
+
         <button
           onClick={handleAnalyze}
-          className="w-full mt-8 bg-[#A67B5B] hover:bg-blue-600 text-white py-3 rounded-xl font-bold"
+          disabled={loading}
+          className={`w-full mt-8 text-white py-3 rounded-xl font-bold ${
+            loading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#A67B5B] hover:bg-blue-600"
+          }`}
         >
-          {loading ? "Analyzing Resume..." : "Analyze Resume with AI"}
+          {loading
+            ? "Analyzing Resume..."
+            : "Analyze Resume with AI"}
         </button>
 
       </div>

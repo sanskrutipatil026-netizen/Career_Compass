@@ -18,6 +18,33 @@ app.use(express.json());
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/feedback", require("./routes/feedback"));
 
+// Skill assessment routes
+const skillAssessmentRoutes =
+  require("./routes/skillAssessment");
+
+app.use(
+  "/api/skill-assessment",
+  skillAssessmentRoutes
+);
+
+// Interview routes
+const interviewRoutes =
+  require("./routes/interview");
+
+app.use(
+  "/api/interview",
+  interviewRoutes
+);
+
+// Resume analysis routes
+const resumeAnalysisRoutes =
+  require("./routes/resumeAnalysis");
+
+app.use(
+  "/api/resume-analysis",
+  resumeAnalysisRoutes
+);
+
 
 // MongoDB connection
 mongoose
