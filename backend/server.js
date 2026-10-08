@@ -16,6 +16,8 @@ app.use(express.json());
 
 // Authentication routes
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/feedback", require("./routes/feedback"));
+
 
 // MongoDB connection
 mongoose

@@ -857,6 +857,40 @@ export default function Home() {
 
       </section>
 
+            {/* =====================================================
+          FINAL FEEDBACK
+      ===================================================== */}
+
+      <section className="max-w-[1500px] mx-auto px-6 md:px-8 py-10">
+
+        <div className="bg-white rounded-[28px] border border-[#e7ddcf] shadow-sm p-8 md:p-10 text-center">
+
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-[#fff0c8] flex items-center justify-center text-2xl">
+            💬
+          </div>
+
+          <h2 className="text-2xl md:text-3xl font-extrabold mt-5">
+            Finished Exploring Career Opportunities?
+          </h2>
+
+          <p className="text-[#756b62] mt-3 max-w-2xl mx-auto leading-relaxed">
+            We would love to hear about your Career Compass experience.
+            Share your feedback and help us make the platform better.
+          </p>
+
+          <button
+            onClick={() => {
+              window.location.href = "/feedback";
+            }}
+            className="mt-6 bg-[#ae7859] hover:bg-[#966247] text-white px-7 py-3 rounded-xl text-sm font-extrabold shadow-sm transition"
+          >
+            Give Feedback →
+          </button>
+
+        </div>
+
+      </section>
+
       {/* =====================================================
           FOOTER
       ===================================================== */}
