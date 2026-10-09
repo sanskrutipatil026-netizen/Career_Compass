@@ -57,7 +57,8 @@ export default function FeedbackPage() {
       }),
     });
 
-    const data = await response.json();
+
+const data = await response.json();
 
     if (!response.ok) {
       alert(data.message || "Failed to submit feedback.");
