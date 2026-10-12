@@ -2,512 +2,188 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-
-type Interview = {
-  _id: string;
-  totalScore?: number;
-  score?: number;
-  totalQuestions?: number;
-  answered?: number;
-  skipped?: number;
-  difficulty?: string;
-  time?: string;
-  createdAt?: string;
-};
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSelector from "../components/LanguageSelector";
 
 export default function Dashboard() {
   const router = useRouter();
-
-  const [activeTab, setActiveTab] =
-    useState("history");
-
-  const [totalSessions, setTotalSessions] =
-    useState(0);
-
-  const [averageScore, setAverageScore] =
-    useState(0);
-
-  const [bestScore, setBestScore] =
-    useState(0);
-
-  const [totalPracticeTime, setTotalPracticeTime] =
-    useState("00:00");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  // =========================================================
-  // LOAD INTERVIEW HISTORY FROM MONGODB
-  // =========================================================
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState("history");
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [averageScore, setAverageScore] = useState(0);
+  const [bestScore, setBestScore] = useState(0);
+  const [totalPracticeTime, setTotalPracticeTime] = useState("00:00");
+  const [userName, setUserName] = useState("User");
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    // Auth Guard: redirect to login page if unauthenticated
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    const userStr = localStorage.getItem("user");
 
-        console.log(
-          "FETCHING INTERVIEW HISTORY FROM MONGODB..."
-        );
+    if (isLoggedIn !== "true" || !userStr) {
+      router.push("/");
+      return;
+    }
 
-        const response = await fetch(
-          "http://127.0.0.1:5000/api/interview/history",
-          {
-            method: "GET",
-            cache: "no-store",
-          }
-        );
+    try {
+      const parsedUser = JSON.parse(userStr);
+      if (parsedUser.name) setUserName(parsedUser.name);
+    } catch (e) {
+      // ignore
+    }
 
-        const responseText =
-          await response.text();
+    const interviews = JSON.parse(
+      localStorage.getItem("allInterviews") || "[]"
+    );
 
-        console.log(
-          "INTERVIEW HISTORY STATUS:",
-          response.status
-        );
+    setTotalSessions(interviews.length);
 
-        console.log(
-          "INTERVIEW HISTORY RESPONSE:",
-          responseText
-        );
+    if (interviews.length > 0) {
+      const totalScore = interviews.reduce(
+        (sum: number, item: any) => sum + item.score,
+        0
+      );
 
-        let data;
+      setAverageScore(Math.round(totalScore / interviews.length));
 
-        try {
-          data = JSON.parse(responseText);
-        } catch {
-          throw new Error(
-            "Interview history API returned invalid JSON."
-          );
-        }
+      const highest = Math.max(
+        ...interviews.map((item: any) => item.score)
+      );
 
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              data?.error ||
-              `Failed to load interview history. Server returned ${response.status}.`
-          );
-        }
+      setBestScore(highest);
 
-        const interviews: Interview[] =
-          Array.isArray(data?.interviews)
-            ? data.interviews
-            : [];
+      let totalSeconds = 0;
 
-        console.log(
-          "MONGODB INTERVIEWS:",
-          interviews
-        );
+      interviews.forEach((item: any) => {
+        const [m, s] = item.time.split(":").map(Number);
+        totalSeconds += m * 60 + s;
+      });
 
-        // =====================================================
-        // TOTAL SESSIONS
-        // =====================================================
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
 
-        setTotalSessions(
-          interviews.length
-        );
+      setTotalPracticeTime(
+        `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+      );
+    }
+  }, [router]);
 
-        // =====================================================
-        // SCORE CALCULATIONS
-        // =====================================================
-
-        if (interviews.length > 0) {
-          const scores =
-            interviews.map(
-              (item) => {
-                const totalScore =
-                  Number(
-                    item.totalScore ??
-                      item.score ??
-                      0
-                  );
-
-                const totalQuestions =
-                  Number(
-                    item.totalQuestions
-                  ) || 5;
-
-                const maximumScore =
-                  totalQuestions * 10;
-
-                if (
-                  maximumScore <= 0
-                ) {
-                  return 0;
-                }
-
-                return Math.round(
-                  (totalScore /
-                    maximumScore) *
-                    100
-                );
-              }
-            );
-
-          // ===================================================
-          // AVERAGE SCORE
-          // ===================================================
-
-          const totalPercentage =
-            scores.reduce(
-              (
-                sum,
-                score
-              ) =>
-                sum + score,
-              0
-            );
-
-          setAverageScore(
-            Math.round(
-              totalPercentage /
-                scores.length
-            )
-          );
-
-          // ===================================================
-          // BEST SCORE
-          // ===================================================
-
-          setBestScore(
-            Math.max(...scores)
-          );
-
-          // ===================================================
-          // TOTAL PRACTICE TIME
-          // ===================================================
-
-          let totalSeconds = 0;
-
-          interviews.forEach(
-            (item) => {
-              if (!item.time) {
-                return;
-              }
-
-              const parts =
-                item.time
-                  .split(":")
-                  .map(Number);
-
-              if (
-                parts.length === 2 &&
-                !Number.isNaN(parts[0]) &&
-                !Number.isNaN(parts[1])
-              ) {
-                const minutes =
-                  parts[0];
-
-                const seconds =
-                  parts[1];
-
-                totalSeconds +=
-                  minutes * 60 +
-                  seconds;
-              }
-            }
-          );
-
-          const minutes =
-            Math.floor(
-              totalSeconds / 60
-            );
-
-          const seconds =
-            totalSeconds % 60;
-
-          setTotalPracticeTime(
-            `${String(
-              minutes
-            ).padStart(
-              2,
-              "0"
-            )}:${String(
-              seconds
-            ).padStart(
-              2,
-              "0"
-            )}`
-          );
-        } else {
-          setAverageScore(0);
-          setBestScore(0);
-          setTotalPracticeTime(
-            "00:00"
-          );
-        }
-      } catch (error) {
-        console.error(
-          "DASHBOARD DATA ERROR:",
-          error
-        );
-
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load dashboard data."
-        );
-
-        setTotalSessions(0);
-        setAverageScore(0);
-        setBestScore(0);
-        setTotalPracticeTime(
-          "00:00"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDashboardData();
-  }, []);
-
-  // =========================================================
-  // UI
-  // =========================================================
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("user");
+    router.push("/");
+  };
 
   return (
     <div className="min-h-screen bg-amber-100">
-
-      {/* =====================================================
-          NAVBAR
-      ===================================================== */}
-
+      
       <nav className="bg-[#A67B5B] shadow-sm px-8 py-4 flex justify-between items-center">
-
         <div className="flex justify-center gap-2">
-
-          <h1 className="text-brown-500 font-bold text-[#A67B5B] w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center font-bold">
-            AI
+          <h1 className="text-brown-500 font-bold text-[#A67B5B] w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center font-bold ">
+            🧭
           </h1>
-
           <div>
-
-            <h1 className="font-bold text-amber-100 text-lg">
-              Career Compass
+            <h1 className="font-bold text-amber-100 text-lg ">
+              {t("brand_name", "Career Compass")}
             </h1>
-
-            <p className="text-xs text-white-500">
-              AI POWERED
+            <p className="text-xs text-amber-200">
+              {t("tagline", "AI POWERED")}
             </p>
-
           </div>
-
-        </div>
+        </div> 
 
         <div className="flex gap-8 font-md">
-
-          <button
-            className="text-gray-200 hover:text-blue-500"
-          >
-            ⚡Dashboard
+          <button className="text-amber-100 font-bold hover:text-white">
+            ⚡{t("nav_dashboard", "Dashboard")}
           </button>
-
-          <button
-            onClick={() =>
-              router.push(
-                "/interview"
-              )
-            }
-            className="text-gray-200 hover:text-blue-500"
-          >
-            🎯Practice
+          <button onClick={() => router.push("/interview")} className="text-amber-200 hover:text-white">
+            🎯{t("nav_practice", "Practice")}
           </button>
-
-          <button
-            onClick={() =>
-              router.push(
-                "/history"
-              )
-            }
-            className="text-gray-200 hover:text-blue-500"
-          >
-            📊My Sessions
+          <button onClick={() => router.push("/history")} className="text-amber-200 hover:text-white">
+            📊{t("nav_my_sessions", "My Sessions")}
           </button>
-
         </div>
+    
+        <div className="flex items-center gap-3">
+          <LanguageSelector variant="dark" />
 
-        <div className="flex items-center gap-4">
-
-          <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-2">
-
-            <div className="w-8 h-8 rounded-full bg-[#A67B5B] text-white flex items-center justify-center font-bold">
-              U
+          <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1.5 shadow-xs">
+            <div className="w-7 h-7 rounded-full bg-[#A67B5B] text-white flex items-center justify-center font-bold text-xs">
+              {userName.charAt(0).toUpperCase()}
             </div>
-
-            <span className="font-md text-black">
-              Hi,
-            </span>
-
-            <span className="font-bold text-black">
-              User
-            </span>
-
+            <span className="text-xs font-semibold text-black">{t("dash_hi", "Hi")}, {userName}</span>
           </div>
 
-          <button className="bg-gray-100 text-black px-5 py-2 rounded-full">
-            Logout
+          <button
+            onClick={handleLogout}
+            className="bg-gray-100 hover:bg-red-50 hover:text-red-600 text-black px-4 py-1.5 rounded-full font-semibold transition text-xs shadow-xs"
+          >
+            {t("nav_logout", "Logout")}
           </button>
-
         </div>
-
       </nav>
 
-      {/* =====================================================
-          MAIN
-      ===================================================== */}
-
       <div className="max-w-7xl mx-auto p-8">
-
-        {/* ===================================================
-            HEADER
-        =================================================== */}
-
         <div className="flex justify-between items-center">
-
           <div className="text-black">
-
-            <p className="text-gray-500">
-              Welcome Back👋
-            </p>
-
-            <h2 className="text-4xl font-bold mt-2">
-              Your Dashboard
+            <p className="text-gray-600 font-medium">{t("dash_greeting", "Welcome Back 👋")}</p>
+            <h2 className="text-4xl font-extrabold mt-1 text-[#3D2B1F]">
+              {t("dash_title", "Your Dashboard")}
             </h2>
-
           </div>
 
           <button
-            onClick={() =>
-              router.push(
-                "/interview"
-              )
-            }
-            className="bg-[#A67B5B] text-white px-6 py-3 rounded-2xl"
+            onClick={() => router.push("/interview")}
+            className="bg-[#A67B5B] hover:bg-[#8B5E3C] text-white px-6 py-3 rounded-2xl font-bold shadow-md transition"
           >
-            ⚡New Interview
+            {t("dash_btn_new_interview", "⚡ New Interview")}
           </button>
-
         </div>
-
-        {/* ===================================================
-            ERROR
-        =================================================== */}
-
-        {error && (
-          <div className="mt-6 bg-red-50 border border-red-200 text-red-600 rounded-xl p-4">
-            {error}
-          </div>
-        )}
-
-        {/* ===================================================
-            STAT CARDS
-        =================================================== */}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-10">
-
-          {/* TOTAL SESSIONS */}
-
-          <div className="bg-white rounded-xl shadow p-6">
-
-            <h3 className="text-gray-500">
-              Total Sessions 📋
-            </h3>
-
-            <p className="text-4xl font-bold mt-3 text-black">
-              {loading
-                ? "..."
-                : totalSessions}
+          <div className="bg-white rounded-2xl shadow p-6 border border-amber-200/50">
+            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider">{t("dash_total_sessions", "Total Sessions")} 📋</h3>
+            <p className="text-4xl font-extrabold mt-3 text-[#3D2B1F]">
+              {totalSessions}
             </p>
-
-            <p>
-              {totalSessions} sessions
-            </p>
-
+            <p className="text-xs text-gray-500 mt-1">{totalSessions} sessions completed</p>
           </div>
 
-          {/* AVERAGE SCORE */}
-
-          <div className="bg-white rounded-xl shadow p-6">
-
-            <h3 className="text-gray-500">
-              Average Score 📈
-            </h3>
-
-            <p className="text-4xl font-bold mt-3 text-black">
-              {loading
-                ? "..."
-                : `${averageScore}%`}
+          <div className="bg-white rounded-2xl shadow p-6 border border-amber-200/50">
+            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider">{t("dash_avg_score", "Average Score")} 📈</h3>
+            <p className="text-4xl font-extrabold mt-3 text-[#3D2B1F]">
+              {averageScore}%
             </p>
-
-            <p>
-              Average Performance
-            </p>
-
+            <p className="text-xs text-gray-500 mt-1">Average Performance</p>
           </div>
 
-          {/* BEST SCORE */}
-
-          <div className="bg-white rounded-xl shadow p-6">
-
-            <h3 className="text-gray-500">
-              Best Score 🏆
-            </h3>
-
-            <p className="text-4xl font-bold mt-3 text-black">
-              {loading
-                ? "..."
-                : `${bestScore}%`}
+          <div className="bg-white rounded-2xl shadow p-6 border border-amber-200/50">
+            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider">{t("dash_highest_score", "Highest Score")} 🏆</h3>
+            <p className="text-4xl font-extrabold mt-3 text-[#3D2B1F]">
+              {bestScore}%
             </p>
-
-            <p>
-              Highest Score
-            </p>
-
+            <p className="text-xs text-gray-500 mt-1">Peak Performance</p>
           </div>
 
-          {/* PRACTICE TIME */}
-
-          <div className="bg-white rounded-xl shadow p-6">
-
-            <h3 className="text-gray-500">
-              Practice Time 🕛
-            </h3>
-
-            <p className="text-3xl font-bold mt-2 text-black">
-              {loading
-                ? "..."
-                : totalPracticeTime}
+          <div className="bg-white rounded-2xl shadow p-6 border border-amber-200/50">
+            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider">{t("dash_practice_time", "Practice Time")} 🕛</h3>
+            <p className="text-3xl font-extrabold mt-3 text-[#3D2B1F]">
+              {totalPracticeTime}
             </p>
-
-            <p>
-              Total Practice Time
-            </p>
-
+            <p className="text-xs text-gray-500 mt-1">Total Practice Time</p>
           </div>
-
         </div>
 
-        {/* ===================================================
-            TABS
-        =================================================== */}
+       
 
         <div className="bg-white rounded-xl shadow mt-10">
 
           <div className="flex border-b">
 
             <button
-              onClick={() =>
-                setActiveTab(
-                  "history"
-                )
-              }
+              onClick={() => setActiveTab("history")}
               className={`flex-1 py-4 ${
-                activeTab ===
-                "history"
+                activeTab === "history"
                   ? "border-b-4 border-[#A67B5B] text-[#A67B5B] font-semibold"
                   : ""
               }`}
@@ -516,14 +192,9 @@ export default function Dashboard() {
             </button>
 
             <button
-              onClick={() =>
-                setActiveTab(
-                  "resume"
-                )
-              }
+              onClick={() => setActiveTab("resume")}
               className={`flex-1 py-4 ${
-                activeTab ===
-                "resume"
+                activeTab === "resume"
                   ? "border-b-4 border-[#A67B5B] text-[#A67B5B] font-semibold"
                   : ""
               }`}
@@ -535,71 +206,25 @@ export default function Dashboard() {
 
           <div className="p-12 text-center">
 
-            {activeTab ===
-            "history" ? (
+            {activeTab === "history" ? (
               <>
+                <h2 className="text-2xl font-bold text-black">
+                  No sessions yet
+                </h2>
 
-                {loading ? (
-                  <>
-                    <div className="w-10 h-10 border-4 border-[#A67B5B] border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="text-gray-500 mt-3">
+                  Start a practice interview or upload your resume for personalised domain suggestions .
+                </p>
 
-                    <h2 className="text-2xl font-bold text-black mt-5">
-                      Loading Sessions
-                    </h2>
-
-                    <p className="text-gray-500 mt-3">
-                      Fetching your interview history from MongoDB...
-                    </p>
-                  </>
-                ) : totalSessions ===
-                  0 ? (
-                  <>
-                    <h2 className="text-2xl font-bold text-black">
-                      No sessions yet
-                    </h2>
-
-                    <p className="text-gray-500 mt-3">
-                      Start a practice interview or upload your resume for personalised domain suggestions.
-                    </p>
-
-                    <button
-                      onClick={() =>
-                        router.push(
-                          "/interview"
-                        )
-                      }
-                      className="mt-8 bg-[#A67B5B] text-white px-6 py-3 rounded-lg"
-                    >
-                      ⚡Start Interview
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="text-2xl font-bold text-black">
-                      {totalSessions} Interview Sessions
-                    </h2>
-
-                    <p className="text-gray-500 mt-3">
-                      Your interview performance is being loaded from MongoDB.
-                    </p>
-
-                    <button
-                      onClick={() =>
-                        router.push(
-                          "/history"
-                        )
-                      }
-                      className="mt-8 bg-[#A67B5B] text-white px-6 py-3 rounded-lg"
-                    >
-                      📊View Interview History
-                    </button>
-                  </>
-                )}
-
+                <button
+                  onClick={() => router.push("/interview")}
+                  className="mt-8 bg-[#A67B5B] text-white px-6 py-3 rounded-lg"
+                >
+                  ⚡Start Interview
+                </button>
               </>
             ) : (
               <>
-
                 <h2 className="text-2xl font-bold text-black">
                   Analyse Resume
                 </h2>
@@ -609,16 +234,11 @@ export default function Dashboard() {
                 </p>
 
                 <button
-                  onClick={() =>
-                    router.push(
-                      "/resume"
-                    )
-                  }
+                  onClick={() => router.push("/resume")}
                   className="mt-8 bg-[#A67B5B] text-white px-6 py-3 rounded-lg"
                 >
                   📄Analyze Resume
                 </button>
-
               </>
             )}
 
@@ -627,7 +247,6 @@ export default function Dashboard() {
         </div>
 
       </div>
-
     </div>
   );
 }

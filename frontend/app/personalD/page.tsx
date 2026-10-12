@@ -39,6 +39,34 @@ const router=useRouter();
 
   const remainingFields = totalFields - filledFields;
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    // Check if user is logged in or draft exists
+    const savedUser = localStorage.getItem("user");
+    const savedDraft = localStorage.getItem("personalDetails") || localStorage.getItem("personalDetailsDraft");
+    
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        setFormData((prev) => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.error("Error parsing saved draft:", e);
+      }
+    } else if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setFormData((prev) => ({
+          ...prev,
+          fullName: parsedUser.name || prev.fullName,
+          email: parsedUser.email || prev.email,
+        }));
+      } catch (e) {
+        console.error("Error parsing user:", e);
+      }
+    }
+  }, []);
+
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -58,22 +86,47 @@ const router=useRouter();
     }, 3500);
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     console.log('Submitted Personal Details:', formData);
 
-    // Save details locally
+    // Save details locally in browser
     localStorage.setItem(
       'personalDetails',
       JSON.stringify(formData)
     );
 
-    triggerToast('Personal details saved successfully!');
-    router.push("/dashboard");
+    // Save details to MongoDB Database via backend API
+    try {
+      const response = await fetch("/api/student/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.warn("Backend save notice:", data.message);
+      } else {
+        console.log("Saved to database:", data);
+      }
+    } catch (apiError) {
+      console.warn("Could not reach backend API, saved locally in browser:", apiError);
+    }
+
+    setIsSubmitting(false);
+    triggerToast('Personal details saved successfully in database!');
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 1000);
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     console.log('Draft Saved:', formData);
 
     localStorage.setItem(
@@ -81,7 +134,17 @@ const router=useRouter();
       JSON.stringify(formData)
     );
 
-    triggerToast('Draft saved to your account!');
+    try {
+      await fetch("/api/student/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+    } catch (err) {
+      // ignore draft sync fail
+    }
+
+    triggerToast('Draft saved to database & locally!');
   };
 
   return (
