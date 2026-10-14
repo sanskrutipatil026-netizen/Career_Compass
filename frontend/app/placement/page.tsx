@@ -127,21 +127,35 @@ if (overallScore >= 85) {
           </a>
 
         </div>
-      </nav>
+      </div>
+    );
+  }
 
-      {/* Main */}
-      <main className="max-w-6xl mx-auto px-6 py-10">
+  return (
+    <div className="min-h-screen bg-amber-100 px-6 py-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-end mb-6">
+  <button
+    onClick={() => router.push("/platforms")}
+    className="bg-[#A67B5B] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+  >
+    Platform
+  </button>
+</div>
 
-        <h2 className="text-3xl font-bold text-[#A67B5B] text-center">
-          AI Placement Readiness
-        </h2>
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-gray-800">
+            Placement Score
+          </h1>
 
-        <p className="text-gray-500 text-center mt-2">
-          Evaluate your overall preparation for placements.
-        </p>
+          <p className="mt-2 text-gray-600">
+            Your placement readiness is calculated using
+            your Resume, Skill Assessment and Interview.
+          </p>
+        </div>
 
-        {/* Score */}
-        <div className="bg-white rounded-xl shadow p-8 mt-8 text-center">
+        <div className="bg-white rounded-3xl shadow-xl p-8 mb-8">
+          <div className="text-center">
 
           <p className="text-gray-500 text-lg">
             Overall Placement Readiness
